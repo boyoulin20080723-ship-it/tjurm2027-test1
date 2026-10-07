@@ -1,4 +1,5 @@
 #include "tests.h"
+#include <iostream>
 
 // 练习1，实现库函数strlen
 int my_strlen(char *str) {
@@ -7,7 +8,13 @@ int my_strlen(char *str) {
      */
 
     // IMPLEMENT YOUR CODE HERE
-    return 0;
+    int len=0;
+    while (*str!='\0')
+    {
+    len++;
+    str++;
+    }
+    return len;
 }
 
 
@@ -19,6 +26,17 @@ void my_strcat(char *str_1, char *str_2) {
      */
 
     // IMPLEMENT YOUR CODE HERE
+    char *p1 = str_1;
+    while (*p1!='\0') {
+        p1++;
+    }
+    while (*str_2!='\0') {
+        *p1 = *str_2;
+        p1++;
+
+        str_2++;
+    }
+    *p1 = '\0';
 }
 
 
@@ -31,9 +49,22 @@ char* my_strstr(char *s, char *p) {
      */
 
     // IMPLEMENT YOUR CODE HERE
-    return 0;
-}
+    if (*p == '\0') return s;
 
+    for (int i = 0; s[i] != '\0'; i++) {
+        int j = 0;
+
+        while (s[i + j] != '\0' && p[j] != '\0' && s[i + j] == p[j]) {
+            j++;
+        }
+
+        if (p[j] == '\0') {
+            return &s[i];
+        }
+    }
+
+    return nullptr;
+}
 
 /**
  * ================================= 背景知识 ==================================
@@ -95,9 +126,21 @@ void rgb2gray(float *in, float *out, int h, int w) {
      * (2) 内存的访问。
      */
 
-    // IMPLEMENT YOUR CODE HERE
-    // ...
+    // IMPLEMENT YOUR CODE HERE   
+     int total_pixels = h * w;
+    for (int i = 0; i < total_pixels; i++) {
+        float r = in[i * 3];
+        float g = in[i * 3 + 1];
+        float b = in[i * 3 + 2];
+
+        if (i == 0) {
+            std::cout << "【调试】第一个像素 r=" << r << ", g=" << g << ", b=" << b << std::endl;
+        }
+
+        out[i] = 0.1140f * b + 0.5870f * g + 0.2989f * r;
+    }
 }
+
 
 // 练习5，实现图像处理算法 resize：缩小或放大图像
 void resize(float *in, float *out, int h, int w, int c, float scale) {
@@ -199,8 +242,40 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
     int new_h = h * scale, new_w = w * scale;
     // IMPLEMENT YOUR CODE HERE
 
-}
+    for (int y = 0; y < new_h; y++) {
+        for (int x = 0; x < new_w; x++) {
+            
+            float x0 = x / scale;
+            float y0 = y / scale;
 
+            int x1 = (int)x0;
+            int y1 = (int)y0;
+
+            if (x1 >= w - 1) x1 = w - 2;
+            if (y1 >= h - 1) y1 = h - 2;
+
+            int x2 = x1 + 1;
+            int y2 = y1 + 1;
+
+            float dx = x0 - x1;
+            float dy = y0 - y1;
+
+            for (int k = 0; k < c; k++) {
+                float p1 = in[(y1 * w + x1) * c + k];
+                float p2 = in[(y1 * w + x2) * c + k];
+                float p3 = in[(y2 * w + x1) * c + k];
+                float p4 = in[(y2 * w + x2) * c + k];
+
+                float result = p1 * (1 - dx) * (1 - dy) +
+                               p2 * dx * (1 - dy) +
+                               p3 * (1 - dx) * dy +
+                               p4 * dx * dy;
+
+                out[(y * new_w + x) * c + k] = result;
+            }
+        }
+    }
+}
 
 // 练习6，实现图像处理算法：直方图均衡化
 void hist_eq(float *in, int h, int w) {
@@ -221,4 +296,49 @@ void hist_eq(float *in, int h, int w) {
      */
 
     // IMPLEMENT YOUR CODE HERE
+        int total_pixels = h * w;
+    int hist[256] = {0};
+    float cdf[256] = {0.0f};
+
+    for (int i = 0; i < total_pixels; i++) {
+        int val = (int)in[i];
+        if (val < 0) val = 0;
+        if (val > 255) val = 255;
+        hist[val]++;
+    }
+
+    cdf[0] = hist[0];
+    for (int i = 1; i < 256; i++) {
+        cdf[i] = cdf[i - 1] + hist[i];
+    }
+
+    float cdf_min = 0.0f;
+    for (int i = 0; i < 256; i++) {
+        if (cdf[i] > 0) {
+            cdf_min = cdf[i];
+            break;
+        }
+    }
+
+    float denom = total_pixels - cdf_min;
+    if (denom <= 0) denom = 1.0f;
+
+    int map[256] = {0};
+    for (int i = 0; i < 256; i++) {
+        if (cdf[i] <= cdf_min) {
+            map[i] = 0;
+        } else {
+            float new_val = (cdf[i] - cdf_min) / denom * 255.0f;
+            map[i] = (int)(new_val + 0.5f);
+            if (map[i] < 0) map[i] = 0;
+            if (map[i] > 255) map[i] = 255;
+        }
+    }
+
+    for (int i = 0; i < total_pixels; i++) {
+        int val = (int)in[i];
+        if (val < 0) val = 0;
+        if (val > 255) val = 255;
+        in[i] = (float)map[val];
+    }
 }
